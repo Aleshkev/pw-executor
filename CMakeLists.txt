@@ -13,5 +13,6 @@ endfunction()
 
 add_library(err err.c)
 add_library(utils utils.c)
+target_link_libraries(utils err)
 add_example_program(executor)
 target_link_libraries(executor utils)
