@@ -15,16 +15,16 @@
 void set_close_on_exec(int file_descriptor, bool value);
 
 /*
- * Split a string into space-delimited parts.
+ * Split a String into space-delimited parts.
  *
- * The result is an array of null-terminated strings, ending with NULL.
+ * The result is an Array of null-terminated strings, ending with NULL.
  * It must be freed with free_split_string().
  *
  * The resulting parts don't contain any spaces.
  * The result has always as many parts as they are spaces, plus 1.
- * In particular, for an empty string, the result is {"", NULL}.
+ * In particular, for an empty String, the result is {"", NULL}.
  * An initial or final space, or two consecutive spaces, result in an
- * empty-string part.
+ * empty-String part.
  */
 char** split_string(const char* s);
 
@@ -35,8 +35,8 @@ void free_split_string(char** parts);
  *
  * Read characters into buffer until a newline or EOF is encountered.
  * If we read anything (possibly just a newline), set buffer to a non-empty
- * null-terminated string and return true. Otherwise (immediate EOF), set buffer
- * to empty string and return false.
+ * null-terminated String and return true. Otherwise (immediate EOF), set buffer
+ * to empty String and return false.
  *
  * The newline is included, if we end at one.
  * If more than `size_of_buffer - 1` characters would be read, exit(1).

@@ -3,7 +3,9 @@ project(MIMUW-FORK C)
 
 set(CMAKE_CXX_STANDARD "17")
 set(CMAKE_C_STANDARD "11")
-set(CMAKE_C_FLAGS "-g -Wall -Wextra -Wno-sign-compare")
+set(CMAKE_C_FLAGS "-g -Wall -Wextra -Wpedantic -Wno-sign-compare")
+
+include_directories(.)
 
 function(add_example_program target_name)
   add_executable(${target_name} "${target_name}.c")
