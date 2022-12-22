@@ -8,27 +8,27 @@ Sara rozwija pewien algorytm i pisze programy, które wykonują się długo, wy
 
 Egzekutor (program `executor`) powinien obsługiwać następujące polecenia (każde polecenie to jedna linia wejścia):
 
-### Polecenie run
+### Polecenie do_run
 
-Polecenie `run A B C ...` tworzy nowe zadanie, rozpoczynając wykonanie programu `A` z argumentami `B C ...` w tle. Zadania identyfikowane są liczbami 0, 1, 2, ..., w kolejności rozpoczęcia (tzn. poleceń `run`). Egzekutor wypisuje `Task T started: pid P.\n`, gdzie `T` to identyfikator zadania, zaś `P` to pid procesu wykonującego program `A`. Cokolwiek program `A` wypisze na standardowe wyjście i wyjście błędów nie powinno się pokazywać. Program `A` nigdy nie będzie oczekiwać standardowego wejścia (można je zostawić bez zmian).
+Polecenie `do_run A B C ...` tworzy nowe zadanie, rozpoczynając wykonanie programu `A` z argumentami `B C ...` w tle. Zadania identyfikowane są liczbami 0, 1, 2, ..., w kolejności rozpoczęcia (tzn. poleceń `do_run`). Egzekutor wypisuje `Task T started: pid P.\n`, gdzie `T` to identyfikator zadania, zaś `P` to pid procesu wykonującego program `A`. Cokolwiek program `A` wypisze na standardowe wyjście i wyjście błędów nie powinno się pokazywać. Program `A` nigdy nie będzie oczekiwać standardowego wejścia (można je zostawić bez zmian).
 
-### Polecenie out
+### Polecenie do_out
 
-Polecenie `out T` wypisuje `Task T stdout: 'S'.\n`, gdzie `S` to ostatnia linia (bez znaku końca linii) dotychczas wypisana przez program `A` z zadania nr `T`. W rozwiązaniu na mniej punktów, egzekutor może zaczekać, aż program `A` wypisze kolejną linię (lub EOF) i użyć jej jako `S`. W rozwiązaniu na pełną liczbę punktów, egzekutor powinien niezwłocznie wypisać ostatnią linię (o ile program `A` przez dłuższy czas nic więcej nie wypisze; jeśli program `A` w krótkim czasie wypisze kolejne linie, można użyć też dowolnej z nich). Program `A` powinien kontynuować działanie.
+Polecenie `do_out T` wypisuje `Task T stdout: 'S'.\n`, gdzie `S` to ostatnia linia (bez znaku końca linii) dotychczas wypisana przez program `A` z zadania nr `T`. W rozwiązaniu na mniej punktów, egzekutor może zaczekać, aż program `A` wypisze kolejną linię (lub EOF) i użyć jej jako `S`. W rozwiązaniu na pełną liczbę punktów, egzekutor powinien niezwłocznie wypisać ostatnią linię (o ile program `A` przez dłuższy czas nic więcej nie wypisze; jeśli program `A` w krótkim czasie wypisze kolejne linie, można użyć też dowolnej z nich). Program `A` powinien kontynuować działanie.
 
 Jeśli program jeszcze nic nie wypisał, można użyć pustego `S`. Jeśli program się zakończył, `S` powinno być ostatnią linią wypisaną przez cały program.
 
-### Polecenie err
+### Polecenie do_err
 
-Polecenie `err T` wypisuje `Task T stderr: 'S'.\n`, analogicznie jak `out T`, ale dla standardowego wyjścia błędów programu `A`. Wypisuje to na zwykłe standardowe wyjście egzekutora (tak jak wszystkie polecenia egzekutora).
+Polecenie `do_err T` wypisuje `Task T stderr: 'S'.\n`, analogicznie jak `do_out T`, ale dla standardowego wyjścia błędów programu `A`. Wypisuje to na zwykłe standardowe wyjście egzekutora (tak jak wszystkie polecenia egzekutora).
 
-### Polecenie kill
+### Polecenie do_kill
 
-Polecenie `kill T` wysyła sygnał SIGINT do programu `A` z zadania nr `T`. Jeśli program już się zakończył, można wysłać sygnał (nieskutecznie, ignorując błąd) lub nie robić nic.
+Polecenie `do_kill T` wysyła sygnał SIGINT do programu `A` z zadania nr `T`. Jeśli program już się zakończył, można wysłać sygnał (nieskutecznie, ignorując błąd) lub nie robić nic.
 
 ### Polecenia pomocnicze
 
-*   `sleep N` – po prostu usypia egzekutora na `N` milisekund (używając np. [`usleep`](https://linux.die.net/man/3/usleep), który używa mikrosekund), gdzie `N` to liczba całkowita. Wstrzymuje na ten czas przetwarzanie kolejnych poleceń; nie wstrzymując żadnych zadań.
+*   `do_sleep N` – po prostu usypia egzekutora na `N` milisekund (używając np. [`usleep`](https://linux.die.net/man/3/usleep), który używa mikrosekund), gdzie `N` to liczba całkowita. Wstrzymuje na ten czas przetwarzanie kolejnych poleceń; nie wstrzymując żadnych zadań.
 *   `quit` lub koniec wejścia (EOF) – kończy egzekutor (i wszystkie programy).
 *   pusta linia – nic nie robi, przechodzi do kolejnego polecenia.
 
@@ -46,7 +46,7 @@ Przykład
 
 Wykonanie w bashu
 
-        echo -e "foo\nbar" > in.txt;    echo -e "run cat in.txt\nsleep 100\nout 0" | ./executor
+        echo -e "foo\nbar" > in.txt;    echo -e "do_run cat in.txt\nsleep 100\nout 0" | ./executor
 
 powinno wypisać na przykład:
 

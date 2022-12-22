@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+# Note that SIGINT won't work.
+python3 ./tester.py
