@@ -12,21 +12,30 @@
 #include <iostream>
 #include <sstream>
 
-#include "Constraints.h"
 #include "task.h"
 #include "threads.h"
 #include "util.h"
 
 // Should be in shared memory.
 struct TaskManager {
-  array<Task, Constraints::MAX_N_TASKS> tasks;
+  array<Task, constraints::MAX_N_TASKS> tasks;
+
+  vector<string> pending_messages;
+  pthread_mutex_t pending_messages_mutex;
+
   pthread_mutex_t activity_mutex;  // To synchronize printing to stdout.
  private:
   long next_task_id = 0;
 
  public:
-  TaskManager() { assert_zero(pthread_mutex_init(&activity_mutex, nullptr)); }
-  ~TaskManager() { assert_zero(pthread_mutex_destroy(&activity_mutex)); }
+  TaskManager() {
+    assert_zero(pthread_mutex_init(&activity_mutex, nullptr));
+    assert_zero(pthread_mutex_init(&pending_messages_mutex, nullptr));
+  }
+  ~TaskManager() {
+    assert_zero(pthread_mutex_destroy(&activity_mutex));
+    assert_zero(pthread_mutex_destroy(&pending_messages_mutex));
+  }
 
   Task *get_task_by_id(size_t task_id) {
     if (task_id >= next_task_id) throw invalid_argument("task not yet created");
@@ -39,7 +48,8 @@ struct TaskManager {
 
     Task *task = &tasks[next_task_id];
     task->~Task();
-    new (task) Task(next_task_id, -1, &activity_mutex);
+    new (task) Task(next_task_id, -1, &activity_mutex, &pending_messages,
+                    &pending_messages_mutex);
     ++next_task_id;
 
     threads::create_process(task, args);
@@ -64,14 +74,33 @@ struct TaskManager {
   }
   void do_kill(Task *task, int signal = SIGINT) {
     if (!task->is_initialized) return;
-    clog << "/kill " << *task << endl;
+    //    clog << "/kill " << *task << endl;
     int kill_status = kill(task->pid, signal);
-    if (errno == ESRCH)  // We probably already killed. the process.
+    if (errno == ESRCH)  // The process probably already ended.
       return;
     assert_sys_ok(kill_status);
   }
   void do_sleep(long milliseconds) {
     assert_sys_ok(usleep(milliseconds * 1000));
+  }
+
+  void do_quit() {
+    for (auto &task : tasks) {
+      if (!task.is_initialized) continue;
+      do_kill(&task, SIGKILL);
+      threads::wait_for_process(&task);
+    }
+  }
+
+  void print_pending_messages() {
+    assert_zero(pthread_mutex_lock(&pending_messages_mutex));
+
+    for (auto &message : pending_messages) {
+      cout << message;
+    }
+    pending_messages.clear();
+
+    assert_zero(pthread_mutex_unlock(&pending_messages_mutex));
   }
 
   bool do_command(const string &line) {
@@ -88,6 +117,8 @@ struct TaskManager {
       while (args) {
         string program_arg;
         args >> program_arg;
+        if (program_arg == "")
+          continue;  // Reading "a b c" by stream yields "a", "b", "c", "".
         program_args.push_back(program_arg);
       }
       do_run(program_args);
@@ -129,16 +160,15 @@ struct TaskManager {
   void read_and_do_commands() {
     string line;
     while (getline(cin, line)) {
-      assert_zero(pthread_mutex_lock(&activity_mutex));
-
       try {
         if (do_command(line)) break;
       } catch (invalid_argument e) {
         cerr << "error: " << e.what() << endl;
       }
-
-      assert_zero(pthread_mutex_unlock(&activity_mutex));
+      print_pending_messages();
     }
+    do_quit();
+    print_pending_messages();
   }
 };
 

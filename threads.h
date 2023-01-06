@@ -12,7 +12,6 @@
 #include <cstring>
 #include <vector>
 
-#include "Constraints.h"
 #include "task_manager.h"
 #include "util.h"
 
@@ -62,19 +61,28 @@ void watch_status(Task *task) {
   int status;
   assert_sys_ok(waitpid(task->pid, &status, WUNTRACED));
 
-  assert_zero(pthread_mutex_lock(task->activity_mutex));
-  cout << "Task " << task->id << " ended: ";
+  assert_zero(pthread_join(task->stdout_watcher, nullptr));
+  assert_zero(pthread_join(task->stderr_watcher, nullptr));
+
+  stringstream message;
+  message << "Task " << task->id << " ended: ";
   if (WIFEXITED(status)) {
-    cout << "status " << WEXITSTATUS(status) << ".\n";
+    message << "status " << WEXITSTATUS(status) << ".\n";
   } else {
-    cout << "signalled.\n";
+    message << "signalled.\n";
   }
-  assert_zero(pthread_mutex_unlock(task->activity_mutex));
+  assert_zero(pthread_mutex_lock(task->pending_messages_mutex));
+  task->pending_messages->push_back(message.str());
+  assert_zero(pthread_mutex_unlock(task->pending_messages_mutex));
 }
 
 void create_status_watcher(Task *task) {
   assert_zero(pthread_create(&task->status_watcher, NULL,
                              (void *(*)(void *))watch_status, (void *)task));
+}
+
+void wait_for_process(Task *task) {
+  assert_zero(pthread_join(task->status_watcher, nullptr));
 }
 
 void create_process(Task *task, vector<string> &program_args) {
@@ -95,8 +103,7 @@ void create_process(Task *task, vector<string> &program_args) {
     // Replace process.
     auto args = to_arg_format(program_args);
     assert_sys_ok(execvp(program_args[0].data(), args.data()));
-    sys_err("execvp failed");
-    return;
+    return;  // Unreachable.
   }
 
   task->pid = child_pid;
