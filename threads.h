@@ -25,6 +25,7 @@ void watch_stdout_or_stderr(int pipe, pthread_mutex_t *mutex,
   auto as_file = fdopen(pipe, "r");
   assert_not_null(as_file);
   while (true) {
+    // Note: fgets() stops at either a newline character, or at the EOF.
     Task::line_t line;
     auto status = fgets(line.data(), line.size(), as_file);
     if (status == nullptr && ferror(as_file) != 0) sys_err("fgets");
