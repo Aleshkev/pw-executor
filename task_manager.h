@@ -36,9 +36,7 @@ struct TaskManager {
     assert_zero(pthread_mutex_destroy(&pending_messages_mutex));
   }
 
-  Task *get_task_by_id(size_t task_id) {
-    return &tasks.at(task_id);
-  }
+  Task *get_task_by_id(size_t task_id) { return &tasks.at(task_id); }
 
  private:
   void do_run(vector<string> args) {

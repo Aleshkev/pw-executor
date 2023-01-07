@@ -6,6 +6,8 @@
 
 using namespace std;
 
+// Convert a vector of strings into a null-terminated vector of char *, so that
+// it can be passed to execvp()
 vector<char *> to_arg_format(vector<string> &v) {
   vector<char *> args;
   args.reserve((v.size() + 1));
@@ -16,6 +18,7 @@ vector<char *> to_arg_format(vector<string> &v) {
   return args;
 }
 
+// System error.
 void sys_err(const char *fmt, ...) {
   va_list fmt_args;
 
@@ -41,7 +44,7 @@ void sys_err(const char *fmt, ...) {
   do {                                                                    \
     int err = (expr);                                                     \
     if (err != 0)                                                         \
-      sys_err("Failed: %s\n\tIn function %s() in %s line %d.\n\tErrno: ", \
+      sys_err("failed: %s\n\tIn function %s() in %s line %d.\n\tErrno: ", \
               #expr, __func__, __FILE__, __LINE__);                       \
   } while (0)
 
@@ -49,7 +52,7 @@ void sys_err(const char *fmt, ...) {
   do {                                                                    \
     void *err = (expr);                                                   \
     if (err == nullptr)                                                   \
-      sys_err("Failed: %s\n\tIn function %s() in %s line %d.\n\tErrno: ", \
+      sys_err("failed: %s\n\tIn function %s() in %s line %d.\n\tErrno: ", \
               #expr, __func__, __FILE__, __LINE__);                       \
   } while (0)
 

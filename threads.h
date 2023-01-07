@@ -19,7 +19,8 @@ using namespace std;
 
 namespace threads {
 
-void watch_stdout_or_stderr([[maybe_unused]] Task *task, int pipe, pthread_mutex_t *mutex,
+// Read text a process writes out, and save the last line.
+void watch_stdout_or_stderr(int pipe, pthread_mutex_t *mutex,
                             Task::line_t *last_line) {
   auto as_file = fdopen(pipe, "r");
   assert_not_null(as_file);
@@ -29,7 +30,8 @@ void watch_stdout_or_stderr([[maybe_unused]] Task *task, int pipe, pthread_mutex
     if (status == nullptr && ferror(as_file) != 0) sys_err("fgets");
     if (status == nullptr) break;
 
-    line[strlen(line.data()) - 1] = '\0';  // Remove '\n'.
+    auto n = strlen(line.data());
+    if (line[n - 1] == '\n') line[n - 1] = '\0';  // Remove '\n'.
 
     assert_zero(pthread_mutex_lock(mutex));
     *last_line = line;
@@ -38,7 +40,7 @@ void watch_stdout_or_stderr([[maybe_unused]] Task *task, int pipe, pthread_mutex
 }
 
 void watch_stdout(Task *task) {
-  watch_stdout_or_stderr(task, task->stdout_pipe, &task->stdout_mutex,
+  watch_stdout_or_stderr(task->stdout_pipe, &task->stdout_mutex,
                          &task->last_stdout_line);
 }
 
@@ -48,15 +50,18 @@ void create_stdout_watcher(Task *task) {
 }
 
 void watch_stderr(Task *task) {
-  watch_stdout_or_stderr(task, task->stderr_pipe, &task->stderr_mutex,
+  watch_stdout_or_stderr(task->stderr_pipe, &task->stderr_mutex,
                          &task->last_stderr_line);
 }
 
+// Creates the watch_stderr thread.
 void create_stderr_watcher(Task *task) {
   assert_zero(pthread_create(&task->stderr_watcher, NULL,
                              (void *(*)(void *))watch_stderr, (void *)task));
 }
 
+// Waits until the task's process and helper threads stop, and messages the exit
+// status.
 void watch_status(Task *task) {
   int status;
   assert_sys_ok(waitpid(task->pid, &status, WUNTRACED));
@@ -76,15 +81,19 @@ void watch_status(Task *task) {
   assert_zero(pthread_mutex_unlock(task->pending_messages_mutex));
 }
 
+// Creates the watch_status thread.
 void create_status_watcher(Task *task) {
   assert_zero(pthread_create(&task->status_watcher, NULL,
                              (void *(*)(void *))watch_status, (void *)task));
 }
 
+// Waits until the task's process and helper threads end. May be called once.
 void wait_for_process(Task *task) {
+  // The status watcher ends after the process and other helper threads end.
   assert_zero(pthread_join(task->status_watcher, nullptr));
 }
 
+// Creates the task's process, replacing standard streams with pipes.
 void create_process(Task *task, vector<string> &program_args) {
   int stdout_pipe[2];
   assert_sys_ok(pipe(stdout_pipe));  // Create pipe.

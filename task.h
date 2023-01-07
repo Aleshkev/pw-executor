@@ -17,31 +17,43 @@
 using namespace std;
 
 namespace constraints {
-//constexpr size_t MAX_COMMAND_LENGTH = 512;
+[[maybe_unused]] constexpr size_t MAX_COMMAND_LENGTH = 512;
 constexpr size_t MAX_N_TASKS = 4096;
 constexpr size_t MAX_LINE_LENGTH = 1024;
-};  // namespace constraints
+}  // namespace constraints
 
 struct Task {
-  long id;
-  long pid;
+  long id;   // Id of the task.
+  long pid;  // Pid of the task's process.
+
+  // A line of text.
   using line_t = array<char, constraints::MAX_LINE_LENGTH + 1>;
+
+  // Last line that was printed by the process to stdout, stderr.
+
   line_t last_stdout_line;
   line_t last_stderr_line;
 
-  // These are initialised if is_initialized is true.
+  // Mutexes to access last_stdout_line, last_stderr_line.
+
   pthread_mutex_t stdout_mutex;
   pthread_mutex_t stderr_mutex;
   pthread_mutex_t stdout_watcher_mutex;
   pthread_mutex_t stderr_watcher_mutex;
   pthread_mutex_t status_watcher_mutex;
 
+  // Access to TaskManager's data.
+
   vector<string> *pending_messages;
   pthread_mutex_t *pending_messages_mutex;
+
+  // The threads waiting for the process's streams and status.
 
   pthread_t stdout_watcher;
   pthread_t stderr_watcher;
   pthread_t status_watcher;
+
+  // The pipes to communicate with the process.
 
   int stdout_pipe = -1;
   int stderr_pipe = -1;
@@ -69,6 +81,7 @@ struct Task {
   }
 };
 
+// Print the task (for debugging).
 ostream &operator<<(ostream &o, Task &task) {
   assert_zero(pthread_mutex_lock(&task.stdout_mutex));
   assert_zero(pthread_mutex_lock(&task.stderr_mutex));
