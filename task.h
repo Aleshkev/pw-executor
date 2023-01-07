@@ -17,13 +17,12 @@
 using namespace std;
 
 namespace constraints {
-constexpr size_t MAX_COMMAND_LENGTH = 512;
+//constexpr size_t MAX_COMMAND_LENGTH = 512;
 constexpr size_t MAX_N_TASKS = 4096;
 constexpr size_t MAX_LINE_LENGTH = 1024;
 };  // namespace constraints
 
 struct Task {
-  const bool is_initialized;
   long id;
   long pid;
   using line_t = array<char, constraints::MAX_LINE_LENGTH + 1>;
@@ -37,8 +36,6 @@ struct Task {
   pthread_mutex_t stderr_watcher_mutex;
   pthread_mutex_t status_watcher_mutex;
 
-  // Access to TaskManager.
-  pthread_mutex_t *activity_mutex;
   vector<string> *pending_messages;
   pthread_mutex_t *pending_messages_mutex;
 
@@ -49,15 +46,12 @@ struct Task {
   int stdout_pipe = -1;
   int stderr_pipe = -1;
 
-  Task(long id, long pid, pthread_mutex_t *activity_mutex,
-       vector<string> *pending_messages,
+  Task(long id, long pid, vector<string> *pending_messages,
        pthread_mutex_t *pending_messages_mutex)
-      : is_initialized(true),
-        id(id),
+      : id(id),
         pid(pid),
         last_stdout_line({'\0'}),
         last_stderr_line({'\0'}),
-        activity_mutex(activity_mutex),
         pending_messages(pending_messages),
         pending_messages_mutex(pending_messages_mutex) {
     assert_zero(pthread_mutex_init(&stdout_mutex, NULL));
@@ -66,33 +60,23 @@ struct Task {
     assert_zero(pthread_mutex_init(&stderr_watcher_mutex, NULL));
     assert_zero(pthread_mutex_init(&status_watcher_mutex, NULL));
   };
-  Task() : is_initialized(false){};
-
   ~Task() {
-    if (is_initialized) {
-      assert_zero(pthread_mutex_destroy(&stdout_mutex));
-      assert_zero(pthread_mutex_destroy(&stderr_mutex));
-      assert_zero(pthread_mutex_destroy(&stdout_watcher_mutex));
-      assert_zero(pthread_mutex_destroy(&stderr_watcher_mutex));
-      assert_zero(pthread_mutex_destroy(&status_watcher_mutex));
-    }
-    memset((void *)this, 0, sizeof *this);
-    new (this) Task();
+    assert_zero(pthread_mutex_destroy(&stdout_mutex));
+    assert_zero(pthread_mutex_destroy(&stderr_mutex));
+    assert_zero(pthread_mutex_destroy(&stdout_watcher_mutex));
+    assert_zero(pthread_mutex_destroy(&stderr_watcher_mutex));
+    assert_zero(pthread_mutex_destroy(&status_watcher_mutex));
   }
 };
 
 ostream &operator<<(ostream &o, Task &task) {
-  if (task.is_initialized) {
-    assert_zero(pthread_mutex_lock(&task.stdout_mutex));
-    assert_zero(pthread_mutex_lock(&task.stderr_mutex));
-  }
+  assert_zero(pthread_mutex_lock(&task.stdout_mutex));
+  assert_zero(pthread_mutex_lock(&task.stderr_mutex));
   o << "Task {.id = " << task.id << ", .pid = " << task.pid
     << ", .last_stdout_line = \"" << task.last_stdout_line.data()
     << "\", .last_stderr_line = \"" << task.last_stderr_line.data() << "\"}";
-  if (task.is_initialized) {
-    assert_zero(pthread_mutex_unlock(&task.stdout_mutex));
-    assert_zero(pthread_mutex_unlock(&task.stderr_mutex));
-  }
+  assert_zero(pthread_mutex_unlock(&task.stdout_mutex));
+  assert_zero(pthread_mutex_unlock(&task.stderr_mutex));
   return o;
 }
 

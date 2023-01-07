@@ -19,7 +19,7 @@ using namespace std;
 
 namespace threads {
 
-void watch_stdout_or_stderr(Task *task, int pipe, pthread_mutex_t *mutex,
+void watch_stdout_or_stderr([[maybe_unused]] Task *task, int pipe, pthread_mutex_t *mutex,
                             Task::line_t *last_line) {
   auto as_file = fdopen(pipe, "r");
   assert_not_null(as_file);
@@ -113,6 +113,6 @@ void create_process(Task *task, vector<string> &program_args) {
   task->stderr_pipe = stderr_pipe[0];    // Save reading end.
 }
 
-};  // namespace threads
+}  // namespace threads
 
 #endif  // THREADS_H

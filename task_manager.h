@@ -18,17 +18,16 @@
 
 // Should be in shared memory.
 struct TaskManager {
-  array<Task, constraints::MAX_N_TASKS> tasks;
+  vector<Task> tasks;
 
   vector<string> pending_messages;
   pthread_mutex_t pending_messages_mutex;
 
   pthread_mutex_t activity_mutex;  // To synchronize printing to stdout.
- private:
-  long next_task_id = 0;
 
  public:
   TaskManager() {
+    tasks.reserve(constraints::MAX_N_TASKS + 16);
     assert_zero(pthread_mutex_init(&activity_mutex, nullptr));
     assert_zero(pthread_mutex_init(&pending_messages_mutex, nullptr));
   }
@@ -38,19 +37,14 @@ struct TaskManager {
   }
 
   Task *get_task_by_id(size_t task_id) {
-    if (task_id >= next_task_id) throw invalid_argument("task not yet created");
     return &tasks.at(task_id);
   }
 
  private:
   void do_run(vector<string> args) {
-    if (next_task_id == tasks.size()) throw invalid_argument("too many tasks");
-
-    Task *task = &tasks[next_task_id];
-    task->~Task();
-    new (task) Task(next_task_id, -1, &activity_mutex, &pending_messages,
-                    &pending_messages_mutex);
-    ++next_task_id;
+    tasks.emplace_back(tasks.size(), -1, &pending_messages,
+                       &pending_messages_mutex);
+    Task *task = &tasks.back();
 
     threads::create_process(task, args);
     threads::create_stdout_watcher(task);
@@ -73,8 +67,6 @@ struct TaskManager {
     assert_zero(pthread_mutex_unlock(&task->stderr_mutex));
   }
   void do_kill(Task *task, int signal = SIGINT) {
-    if (!task->is_initialized) return;
-    //    clog << "/kill " << *task << endl;
     int kill_status = kill(task->pid, signal);
     if (errno == ESRCH)  // The process probably already ended.
       return;
@@ -86,7 +78,6 @@ struct TaskManager {
 
   void do_quit() {
     for (auto &task : tasks) {
-      if (!task.is_initialized) continue;
       do_kill(&task, SIGKILL);
       threads::wait_for_process(&task);
     }
@@ -129,10 +120,6 @@ struct TaskManager {
       long task_id;
       args >> task_id;
       auto task = get_task_by_id(task_id);
-
-      if (!task->is_initialized) {
-        throw invalid_argument("the task is not running");
-      }
 
       if (command == "info") {
         do_info(task);
@@ -177,7 +164,6 @@ ostream &operator<<(ostream &o, TaskManager &task_manager) {
     << "\n  ";
   bool first = true;
   for (auto &task : task_manager.tasks) {
-    if (!task.is_initialized) continue;
     if (!first) o << ",\n  ";
     first = false;
     o << task;
