@@ -40,7 +40,7 @@ struct TaskManager {
 
  private:
   void do_run(vector<string> args) {
-    tasks.emplace_back(tasks.size(), -1, &pending_messages,
+    tasks.emplace_back(tasks.size(), -1, &activity_mutex, &pending_messages,
                        &pending_messages_mutex);
     Task *task = &tasks.back();
 
@@ -145,14 +145,25 @@ struct TaskManager {
   void read_and_do_commands() {
     string line;
     while (getline(cin, line)) {
+      assert_zero(pthread_mutex_lock(&activity_mutex));
+
+      bool is_last_command = false;
       try {
-        if (do_command(line)) break;
+        is_last_command = do_command(line);
       } catch (invalid_argument e) {
         cerr << "error: " << e.what() << endl;
       }
       print_pending_messages();
+
+      assert_zero(pthread_mutex_unlock(&activity_mutex));
+
+      if (is_last_command) {
+        break;
+      }
     }
+    assert_zero(pthread_mutex_lock(&activity_mutex));
     do_quit();
+    assert_zero(pthread_mutex_unlock(&activity_mutex));  // Shouldn't matter.
     print_pending_messages();
   }
 };

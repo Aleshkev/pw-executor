@@ -78,9 +78,17 @@ void watch_status(Task *task) {
   } else {
     message << "signalled.\n";
   }
-  assert_zero(pthread_mutex_lock(task->pending_messages_mutex));
-  task->pending_messages->push_back(message.str());
-  assert_zero(pthread_mutex_unlock(task->pending_messages_mutex));
+
+  // Print the message if the main thread is waiting for user input, else add
+  // the message to the queue.
+  if (pthread_mutex_trylock(task->activity_mutex) == 0) {
+    cout << message.str();
+    assert_zero(pthread_mutex_unlock(task->activity_mutex));
+  } else {
+    assert_zero(pthread_mutex_lock(task->pending_messages_mutex));
+    task->pending_messages->push_back(message.str());
+    assert_zero(pthread_mutex_unlock(task->pending_messages_mutex));
+  }
 }
 
 // Creates the watch_status thread.
@@ -121,7 +129,7 @@ void create_process(Task *task, vector<string> &program_args) {
     assert_sys_ok(execvp(program_args[0].data(), args.data()));
     return;  // Unreachable.
   }
-  
+
   task->pid = child_pid;
   assert_sys_ok(close(stdout_pipe[1]));  // Close writing end.
   assert_sys_ok(close(stderr_pipe[1]));  // Close writing end.

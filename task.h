@@ -44,6 +44,7 @@ struct Task {
 
   // Access to TaskManager's data.
 
+  pthread_mutex_t *activity_mutex;
   vector<string> *pending_messages;
   pthread_mutex_t *pending_messages_mutex;
 
@@ -58,12 +59,14 @@ struct Task {
   int stdout_pipe = -1;
   int stderr_pipe = -1;
 
-  Task(long id, long pid, vector<string> *pending_messages,
+  Task(long id, long pid, pthread_mutex_t *activity_mutex,
+       vector<string> *pending_messages,
        pthread_mutex_t *pending_messages_mutex)
       : id(id),
         pid(pid),
         last_stdout_line({'\0'}),
         last_stderr_line({'\0'}),
+        activity_mutex(activity_mutex),
         pending_messages(pending_messages),
         pending_messages_mutex(pending_messages_mutex) {
     assert_zero(pthread_mutex_init(&stdout_mutex, NULL));
