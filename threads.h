@@ -38,6 +38,7 @@ void watch_stdout_or_stderr(int pipe, pthread_mutex_t *mutex,
     *last_line = line;
     assert_zero(pthread_mutex_unlock(mutex));
   }
+  assert_sys_ok(fclose(as_file));
 }
 
 void watch_stdout(Task *task) {
@@ -119,8 +120,10 @@ void create_process(Task *task, vector<string> &program_args) {
   task->pid = child_pid;
   assert_sys_ok(close(stdout_pipe[1]));  // Close writing end.
   task->stdout_pipe = stdout_pipe[0];    // Save reading end.
+  set_to_close_on_exec(task->stdout_pipe);
   assert_sys_ok(close(stderr_pipe[1]));  // Close writing end.
   task->stderr_pipe = stderr_pipe[0];    // Save reading end.
+  set_to_close_on_exec(task->stderr_pipe);
 }
 
 }  // namespace threads

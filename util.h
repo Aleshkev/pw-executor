@@ -56,4 +56,9 @@ void sys_err(const char *fmt, ...) {
               #expr, __func__, __FILE__, __LINE__);                       \
   } while (0)
 
+void set_to_close_on_exec(int fd) {
+
+  assert_sys_ok(fcntl(fd, F_SETFD, FD_CLOEXEC));
+}
+
 #endif  // UTIL_H
