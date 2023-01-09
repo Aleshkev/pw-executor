@@ -102,6 +102,11 @@ void create_process(Task *task, vector<string> &program_args) {
   int stderr_pipe[2];
   assert_sys_ok(pipe(stderr_pipe));  // Create pipe.
 
+  task->stdout_pipe = stdout_pipe[0];       // Save reading end.
+  set_to_close_on_exec(task->stdout_pipe);  // Don't copy.
+  task->stderr_pipe = stderr_pipe[0];       // Save reading end.
+  set_to_close_on_exec(task->stderr_pipe);  // Don't copy.
+
   pid_t child_pid = fork();
   if (child_pid == 0) {                                  // The new process.
     assert_sys_ok(close(stdout_pipe[0]));                // Close reading end.
@@ -116,14 +121,10 @@ void create_process(Task *task, vector<string> &program_args) {
     assert_sys_ok(execvp(program_args[0].data(), args.data()));
     return;  // Unreachable.
   }
-
+  
   task->pid = child_pid;
   assert_sys_ok(close(stdout_pipe[1]));  // Close writing end.
-  task->stdout_pipe = stdout_pipe[0];    // Save reading end.
-  set_to_close_on_exec(task->stdout_pipe);
   assert_sys_ok(close(stderr_pipe[1]));  // Close writing end.
-  task->stderr_pipe = stderr_pipe[0];    // Save reading end.
-  set_to_close_on_exec(task->stderr_pipe);
 }
 
 }  // namespace threads
