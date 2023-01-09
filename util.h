@@ -61,4 +61,8 @@ void set_to_close_on_exec(int fd) {
   assert_sys_ok(fcntl(fd, F_SETFD, FD_CLOEXEC));
 }
 
+void assert_mutex_is_locked(pthread_mutex_t *pthread_mutex) {
+  if(pthread_mutex_lock(pthread_mutex) == 0) sys_err("mutex not locked");
+}
+
 #endif  // UTIL_H

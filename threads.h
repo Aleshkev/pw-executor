@@ -71,22 +71,22 @@ void watch_status(Task *task) {
   assert_zero(pthread_join(task->stdout_watcher, nullptr));
   assert_zero(pthread_join(task->stderr_watcher, nullptr));
 
-  stringstream message;
-  message << "Task " << task->id << " ended: ";
+  Task::line_t message;
   if (WIFEXITED(status)) {
-    message << "status " << WEXITSTATUS(status) << ".\n";
+    sprintf(message.data(), "Task %li ended: status %i.\n", task->id,
+            WEXITSTATUS(status));
   } else {
-    message << "signalled.\n";
+    sprintf(message.data(), "Task %li ended: signalled.\n", task->id);
   }
 
-  // Print the message if the main thread is waiting for user input, else add
-  // the message to the queue.
+  // Print the message_stream if the main thread is waiting for user input, else
+  // add the message_stream to the queue.
   if (pthread_mutex_trylock(task->activity_mutex) == 0) {
-    cout << message.str();
+    printf("%s", message.data());
     assert_zero(pthread_mutex_unlock(task->activity_mutex));
   } else {
     assert_zero(pthread_mutex_lock(task->pending_messages_mutex));
-    task->pending_messages->push_back(message.str());
+    task->pending_messages->push_back(string(message.data()));
     assert_zero(pthread_mutex_unlock(task->pending_messages_mutex));
   }
 }

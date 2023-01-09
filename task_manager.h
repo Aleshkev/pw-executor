@@ -49,19 +49,17 @@ struct TaskManager {
     threads::create_stderr_watcher(task);
     threads::create_status_watcher(task);
 
-    cout << "Task " << task->id << " started: pid " << task->pid << ".\n";
+    printf("Task %li started: pid %li.\n", task->id, task->pid);
   }
   void do_info(Task *task) { cout << *task << endl; }
   void do_out(Task *task) {
     assert_zero(pthread_mutex_lock(&task->stdout_mutex));
-    cout << "Task " << task->id << " stdout: '" << task->last_stdout_line.data()
-         << "'.\n";
+    printf("Task %li stdout: '%s'.\n", task->id, task->last_stdout_line.data());
     assert_zero(pthread_mutex_unlock(&task->stdout_mutex));
   }
   void do_err(Task *task) {
     assert_zero(pthread_mutex_lock(&task->stderr_mutex));
-    cout << "Task " << task->id << " stderr: '" << task->last_stderr_line.data()
-         << "'.\n";
+    printf("Task %li stderr: '%s'.\n", task->id, task->last_stderr_line.data());
     assert_zero(pthread_mutex_unlock(&task->stderr_mutex));
   }
   void do_kill(Task *task, int signal = SIGINT) {
@@ -85,7 +83,7 @@ struct TaskManager {
     assert_zero(pthread_mutex_lock(&pending_messages_mutex));
 
     for (auto &message : pending_messages) {
-      cout << message;
+      printf("%s", message.data());
     }
     pending_messages.clear();
 
